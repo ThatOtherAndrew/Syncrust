@@ -9,7 +9,7 @@ pub struct Output {
 }
 
 impl Output {
-    pub fn new(device: Device) -> Self {
+    pub fn new(device: Device, sample_rate: u32) -> Self {
         let name = device.name().unwrap();
         let buffer = Arc::new((Mutex::new(VecDeque::new()), Condvar::new()));
         let callback_buffer = buffer.clone();
@@ -19,16 +19,14 @@ impl Output {
                 .build_output_stream(
                     &StreamConfig {
                         channels: 2,
-                        sample_rate: SampleRate(48000),
+                        sample_rate: SampleRate(sample_rate),
                         buffer_size: BufferSize::Default,
                     },
                     move |data: &mut [f32], _| {
                         let (buffer, condvar) = &*callback_buffer;
-                        println!("Waiting for condvar...");
                         let mut buffer = condvar
                             .wait_while(buffer.lock().unwrap(), |buf| buf.len() < data.len())
                             .unwrap();
-                        println!("Writing sample");
                         for sample in data {
                             *sample = buffer.pop_front().unwrap();
                         }

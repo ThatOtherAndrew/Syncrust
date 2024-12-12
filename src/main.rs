@@ -1,9 +1,12 @@
 mod output;
 
+use std::f32::consts::{TAU};
 use crate::output::Output;
 use cpal::traits::{DeviceTrait, HostTrait};
-use rand::random;
 use std::sync::mpsc::channel;
+
+const RATE: u32 = 48_000;
+const FRATE: f32 = RATE as f32;  // short for FrustRATE, because why tf is this necessary
 
 fn main() {
     let host = cpal::default_host();
@@ -21,7 +24,7 @@ fn main() {
             )
         }
 
-        outputs.push(Output::new(device));
+        outputs.push(Output::new(device, RATE));
     }
 
     let (sigint_tx, sigint_rx) = channel();
@@ -31,13 +34,17 @@ fn main() {
         output.play();
     }
 
+    let mut t = 0;
     loop {
         if sigint_rx.try_recv().is_ok() {
             break;
         };
-        let random_sample = random::<f32>() / 20.;
+
+        let sine = f32::sin(t as f32 * TAU * 440. / FRATE) / 5.;
+
         for output in &mut outputs {
-            output.write(&[random_sample])
+            output.write(&[sine])
         }
+        t += 1;
     }
 }
